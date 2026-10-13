@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bounce Edu</title>
+<style>
+:root{--sky:#87CEEB;--brick:#b7412c;--gold:#ffd700;--gem:#00e5ff;--ok:#28c745;--no:#e53935;--btn:#4285f4;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+body{background:linear-gradient(180deg,var(--sky),#e0f2ff 70%);overflow:hidden}
+canvas{display:block;background:linear-gradient(180deg,#87CEEB 0%,#bfe3ff 100%)}
+#ui{position:absolute;inset:0;pointer-events:none}
+.start-screen{position:absolute;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.panel{background:white;border-radius:20px;padding:24px;width:min(94%,540px);box-shadow:0 10px 40px #0004;border:4px solid var(--gold);max-height:92vh;overflow-y:auto}
+h1{color:var(--brick);text-align:center;font-size:2rem;margin-bottom:4px}
+.subtitle{text-align:center;color:#666;margin-bottom:20px;font-weight:500}
+h3{margin:16px 0 10px;color:#333}
+h4{margin:12px 0 6px;color:#444}
+.mode-card{border:3px solid #ddd;border-radius:12px;padding:14px;margin:8px 0;cursor:pointer;transition:.2s;background:#fafafa;pointer-events:auto}
+.mode-card:hover{border-color:#bbb;background:#f5f5f5}
+.mode-card.selected{border-color:var(--btn);background:#eef4ff;box-shadow:0 0 0 3px rgba(66,133,244,0.2)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+button{padding:10px 16px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:.95rem;transition:.2s;pointer-events:auto}
+.btn-primary{background:var(--btn);color:white}
+.btn-success{background:var(--ok);color:white}
+.btn-accent{background:linear-gradient(135deg,#ff9800,var(--gold));color:#222}
+input,textarea,select{width:100%;padding:10px;margin:6px 0 12px;border:2px solid #ddd;border-radius:8px;font-size:1rem;pointer-events:auto}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--btn);box-shadow:0 0 0 3px rgba(66,133,244,0.15)}
+.hidden{display:none !important}
+.q-item{padding:6px 0;border-bottom:1px solid #eee;font-size:.9rem}
+.preview-box{background:#f8f9fa;border-radius:8px;padding:10px;margin-top:8px;max-height:140px;overflow:auto}
+.hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;color:white;font-weight:bold;text-shadow:0 2px 4px #0008;font-size:.95rem;pointer-events:none}
+.ctrl-hint{position:absolute;bottom:10px;left:10px;right:10px;color:white;font-weight:bold;text-shadow:0 2px 4px #0008;display:flex;justify-content:space-between;font-size:.85rem;pointer-events:none}
+.bonus-info{color:var(--gold)}
+.q-modal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;padding:28px;width:min(92%,480px);box-shadow:0 12px 40px #0006;border:4px solid var(--gold);pointer-events:auto}
+.q-title{font-size:1rem;color:#666;margin-bottom:8px}
+.q-text{font-size:1.2rem;font-weight:600;margin-bottom:18px;color:#222;line-height:1.5}
+.opt{display:block;width:100%;padding:14px;margin:8px 0;border:3px solid #e0e0e0;border-radius:12px;background:#fafafa;cursor:pointer;text-align:left;font-size:1rem;transition:.2s;pointer-events:auto}
+.opt:hover{border-color:var(--btn);background:#f0f6ff;transform:translateX(4px)}
+.opt.correct{border-color:var(--ok);background:#e6ffe6}
+.opt.wrong{border-color:var(--no);background:#ffe6e6}
+.feedback{margin-top:14px;font-weight:bold;font-size:1.1rem;padding:10px;border-radius:8px}
+.feedback.correct{color:var(--ok);background:#e6ffe6}
+.feedback.wrong{color:var(--no);background:#ffe6e6}
+.end-screen{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.end-panel{background:white;border-radius:20px;padding:30px;text-align:center;width:min(92%,420px);box-shadow:0 12px 40px #0006;border:4px solid var(--gold)}
+.final-score{font-size:2.5rem;font-weight:bold;color:var(--btn);margin:12px 0}
+.stats-row{display:flex;justify-content:center;gap:24px;margin:16px 0}
+.stat-box{text-align:center}
+.stat-val{font-size:1.4rem;font-weight:bold}
+.stat-val.ok{color:var(--ok)}
+.stat-val.no{color:var(--no)}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="startScreen" class="start-screen">
+    <div class="panel">
+      <h1>🔴 BOUNCE EDU</h1>
+      <p class="subtitle">Lompat • Kumpulkan • Jawab • Menang</p>
+      <h3>1. Pilih Mode</h3>
+      <div class="mode-card" data-mode="individual">
+        <strong>👤 Individu</strong>
+        <p style="font-size:.85rem;color:#666;margin-top:4px">Bermain sendiri</p>
+      </div>
+      <div class="mode-card" data-mode="team">
+        <strong>👥 Tim</strong>
+        <p style="font-size:.85rem;color:#666;margin-top:4px">Bekerja sama</p>
+      </div>
+      <div class="mode-card" data-mode="battle">
+        <strong>⚔️ Pertarungan</strong>
+        <p style="font-size:.85rem;color:#666;margin-top:4px">Bandingkan skor</p>
+      </div>
+      <h3>2. Masukkan Soal</h3>
+      <div class="btn-row">
+        <button class="btn-primary" id="btnManual">✍️ Isi Manual</button>
+        <button class="btn-accent" id="btnAI">🤖 Buat Otomatis</button>
+      </div>
+      <div id="manualForm" class="hidden" style="margin-top:15px">
+        <h4>Tambah Soal</h4>
+        <input type="text" id="qText" placeholder="Pertanyaan">
+        <input type="text" id="qA" placeholder="Pilihan A">
+        <input type="text" id="qB" placeholder="Pilihan B">
+        <input type="text" id="qC" placeholder="Pilihan C">
+        <input type="text" id="qD" placeholder="Pilihan D">
+        <select id="qKey">
+          <option value="">-- Kunci Jawaban --</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+        <button class="btn-success" id="addQ" style="width:100%">➕ Tambahkan</button>
+      </div>
+      <div id="aiForm" class="hidden" style="margin-top:15px">
+        <h4>Buat Soal Otomatis</h4>
+        <textarea id="aiPrompt" rows="3" placeholder="Contoh: 5 soal perkalian kelas 4 SD"></textarea>
+        <button class="btn-accent" id="genAI" style="width:100%">✨ Buat Soal</button>
+        <div id="aiResult" class="preview-box hidden"></div>
+      </div>
+      <div style="margin-top:18px">
+        <h4>Daftar Soal (<span id="qCount">0</span>)</h4>
+        <div id="qList" style="max-height:150px;overflow:auto;background:#f5f5f5;padding:10px;border-radius:10px;margin-top:6px">
+          <p style="color:#999;font-size:.9rem">Belum ada soal</p>
+        </div>
+      </div>
+      <button class="btn-success" id="startBtn" style="width:100%;margin-top:20px;padding:16px;font-size:1.25rem">▶ MULAI PERMAINAN</button>
+    </div>
+  </div>
+  <div id="gameHUD" class="hud hidden">
+    <div>❤️ <span id="hearts">3</span> &nbsp; 🪙 <span id="rings">0</span>/<span id="ringNeed">5</span> &nbsp; 💎 <span id="crystals">0</span></div>
+    <div>LVL <span id="level">1</span> &nbsp; Skor: <span id="score">0</span></div>
+  </div>
+  <div id="ctrlHint" class="ctrl-hint hidden">
+    <div>⬅️➡️ Bergerak &nbsp;|&nbsp; ⬆️ / Spasi Lompat</div>
+    <div class="bonus-info" id="bonusInfo"></div>
+  </div>
+  <div id="qModal" class="q-modal hidden">
+    <p class="q-title">Soal — Level <span id="qLevel">1</span></p>
+    <p class="q-text" id="qBody"></p>
+    <button class="opt" data-opt="A">A. <span id="optA"></span></button>
+    <button class="opt" data-opt="B">B. <span id="optB"></span></button>
+    <button class="opt" data-opt="C">C. <span id="optC"></span></button>
+    <button class="opt" data-opt="D">D. <span id="optD"></span></button>
+    <p id="feedback" class="feedback hidden"></p>
+  </div>
+  <div id="endScreen" class="end-screen hidden">
+    <div class="end-panel">
+      <h2>🎉 SELESAI!</h2>
+      <p style="color:#666;margin-top:8px">Mode: <span id="finalMode">—</span></p>
+      <p class="final-score" id="finalScore">0</p>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-val ok" id="okCount">0</div>
+          <div>Benar</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val no" id="noCount">0</div>
+          <div>Salah</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--gold)" id="totalQ">0</div>
+          <div>Jumlah</div>
+        </div>
+      </div>
+      <button class="btn-success" id="restartBtn" style="margin-top:10px;padding:12px 24px;font-size:1rem">🔄 Main Lagi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 960;
+const H = canvas.height = 600;
+
+let questions = [];
+let gameState = 'setup';
+let selectedMode = null;
+
+const stats = {
+  level: 1, score: 0, hearts: 3, rings: 0, ringsNeeded: 5, crystals: 0,
+  correct: 0, wrong: 0, multiplier: 1, shield: 0, speedBoost: 0, doubleScore: 0
+};
+
+let platforms = [], collectibles = [], hazards = [], questionZones = [], portals = [], currentQuestionZone = null;
+
+const player = { x: 60, y: H - 100, w: 32, h: 32, vx: 0, vy: 0, onGround: false, dir: 1 };
+const keys = { left: false, right: false, jump: false };
+
+const sampleQuestions = [
+  { q: 'Berapakah hasil dari 8 × 7?', A: '54', B: '56', C: '64', D: '72', key: 'B', level: 1 },
+  { q: 'Ibu membeli 3 lusin buku. Berapa jumlah seluruh bukunya?', A: '30', B: '36', C: '24', D: '42', key: 'B', level: 1 },
+  { q: 'Bentuk paling sederhana dari 24/36 adalah…', A: '1/2', B: '2/3', C: '3/4', D: '4/5', key: 'B', level: 2 },
+  { q: '2,5 km + 300 m = … meter', A: '280', B: '2530', C: '2800', D: '3250', key: 'C', level: 2 },
+  { q: 'Faktor persekutuan terbesar dari 12 dan 18 adalah…', A: '3', B: '6', C: '9', D: '12', key: 'B', level: 3 },
+  { q: 'Nilai tempat angka 7 pada bilangan 4.725 adalah…', A: 'Satuan', B: 'Puluhan', C: 'Ratusan', D: 'Ribuan', key: 'C', level: 1 },
+  { q: 'Sudut yang besarnya 90° disebut sudut…', A: 'Lancip', B: 'Siku-siku', C: 'Tumpul', D: 'Lurus', key: 'B', level: 2 },
+  { q: 'Hasil dari 1.200 : 30 = …', A: '30', B: '40', C: '300', D: '400', key: 'B', level: 3 },
+  { q: 'Bangun datar yang memiliki 4 sisi sama panjang dan 4 sudut siku-siku adalah…', A: 'Persegi panjang', B: 'Persegi', C: 'Jajar genjang', D: 'Belah ketupat', key: 'B', level: 1 },
+  { q: 'Jika panjang 12 cm & lebar 8 cm, keliling persegi panjang adalah…', A: '20 cm', B: '40 cm', C: '96 cm', D: '100 cm', key: 'B', level: 3 }
+];
+
+function togglePanel(id) {
+  ['manualForm', 'aiForm'].forEach(i => document.getElementById(i).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function updateQuestionList() {
+  const list = document.getElementById('qList');
+  document.getElementById('qCount').textContent = questions.length;
+  if (!questions.length) {
+    list.innerHTML = '<p style="color:#999;font-size:.9rem">Belum ada soal</p>';
+    return;
+  }
+  list.innerHTML = questions.map((q, i) =>
+    `<div class="q-item">${i+1}. ${q.q.substring(0, 45)}… → <strong>${q.key}</strong></div>`
+  ).join('');
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length; i--;) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function boxCollision(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+document.querySelectorAll('.mode-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedMode = card.dataset.mode;
+  });
+});
+
+document.getElementById('btnManual').onclick = () => togglePanel('manualForm');
+document.getElementById('btnAI').onclick = () => togglePanel('aiForm');
+
+document.getElementById('addQ').onclick = () => {
+  const q = {
+    q: document.getElementById('qText').value.trim(),
+    A: document.getElementById('qA').value.trim(),
+    B: document.getElementById('qB').value.trim(),
+    C: document.getElementById('qC').value.trim() || '-',
+    D: document.getElementById('qD').value.trim() || '-',
+    key: document.getElementById('qKey').value,
+    level: 1
+  };
+  if (!q.q || !q.A || !q.B || !q.key) {
+    return alert('Lengkapi soal, pilihan A & B, dan kunci jawaban!');
+  }
+  questions.push(q);
+  updateQuestionList();
+  ['qText', 'qA', 'qB', 'qC', 'qD'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('qKey').value = '';
+  alert('✅ Soal ditambahkan!');
+};
+
+document.getElementById('genAI').onclick = async () => {
+  const prompt = document.getElementById('aiPrompt').value.trim();
+  if (!prompt) return alert('Tulis topik soal dulu!');
+  const resultBox = document.getElementById('aiResult');
+  resultBox.classList.remove('hidden');
+  resultBox.innerHTML = '<p style="color:var(--btn)">⏳ Sedang menyusun soal…</p>';
+  await new Promise(res => setTimeout(res, 1500));
+  const generated = generateQuestionsFromPrompt(prompt);
+  generated.forEach(q => questions.push(q));
+  updateQuestionList();
+  resultBox.innerHTML = `<p style="color:var(--ok)">✅ Berhasil membuat ${generated.length} soal baru!</p>`;
+  document.getElementById('aiPrompt').value = '';
+};
+
+function generateQuestionsFromPrompt(prompt) {
+  const qs = [];
+  const matchNum = prompt.match(/(\d+)\s*(soal)/i);
+  const count = matchNum ? Math.min(parseInt(matchNum[1]), 15) : 5;
+  const isMath = /perkalian|penjumlahan|pengurangan|pembagian|bilangan|matematika/i.test(prompt);
+
+  if (isMath) {
+    const ops = [
+      { s: '×', f: (a,b) => a*b },
+      { s: '+', f: (a,b) => a+b },
+      { s: '−', f: (a,b) => a-b }
+    ];
+    for (let i = 0; i < count; i++) {
+      const op = ops[Math.floor(Math.random() * ops.length)];
+      const a = Math.floor(Math.random() * 10) + 2;
+      const b = Math.floor(Math.random() * 10) + 2;
+      const ans = op.f(a, b);
+      if (ans < 0) continue;
+      const opts = shuffleArray([ans, ans + 5, ans - 3 || ans + 4, ans + 7]).slice(0,4);
+      const key = ['A','B','C','D'][opts.indexOf(ans)];
+      qs.push({ q: `Berapakah ${a} ${op.s} ${b}?`, A: opts[0], B: opts[1], C: opts[2], D: opts[3], key, level: 1 });
+    }
+  } else {
+    for (let i = 0; i < count; i++) {
+      const num = i + 1;
+      const opts = shuffleArray(['Jawaban A', 'Jawaban B', 'Jawaban C', 'Jawaban D']);
+      qs.push({ q: `Soal ${num}: ${prompt}`, A: opts[0], B: opts[1], C: opts[2], D: opts[3], key: 'A', level: 1 });
+    }
+  }
+  return qs;
+}
+
+document.getElementById('startBtn').onclick = () => {
+  if (!selectedMode) return alert('Pilih mode dulu!');
+  if (!questions.length) {
+    questions = [...sampleQuestions];
+    alert('⚠️ Menggunakan soal contoh.');
+  }
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameHUD').classList.remove('hidden');
+  document.getElementById('ctrlHint').classList.remove('hidden');
+  gameState = 'playing';
+  initLevel(1);
+  gameLoop();
+};
+
+function initLevel(lv) {
+  stats.level = lv; stats.rings = 0; stats.shield = 0; stats.speedBoost = 0; stats.doubleScore = 0;
+  platforms = []; collectibles = []; hazards = []; questionZones = []; portals = [];
+
+  platforms.push({ x: 0, y: H - 40, w: W, h: 40, type: 'ground' });
+
+  const maps = {
+    1: [ { x: 120, y: 480, w: 160, h: 24 }, { x: 350, y: 400, w: 120, h: 24 }, { x: 550, y: 340, w: 140, h: 24 }, { x: 760, y: 280, w: 150, h: 24 } ],
+    2: [ { x: 90, y: 500, w: 120, h: 24 }, { x: 280, y: 430, w: 100, h: 24 }, { x: 180, y: 350, w: 110, h: 24 }, { x: 450, y: 380, w: 100, h: 24 }, { x: 620, y: 300, w: 130, h: 24 }, { x: 800, y: 240, w: 120, h: 24 } ],
+    3: [ { x: 60, y: 510, w: 90, h: 24 }, { x: 220, y: 450, w: 80, h: 24 }, { x: 380, y: 380, w: 90, h: 24 }, { x: 200, y: 300, w: 80, h: 24 }, { x: 520, y: 330, w: 90, h: 24 }, { x: 680, y: 260, w: 100, h: 24 }, { x: 840, y: 200, w: 100, h: 24 } ],
+    4: [ { x: 50, y: 520, w: 70, h: 24 }, { x: 180, y: 460, w: 65, h: 24 }, { x: 320, y: 400, w: 70, h: 24 }, { x: 450, y: 330, w: 65, h: 24 }, { x: 580, y: 260, w: 70, h: 24 }, { x: 720, y: 200, w: 80, h: 24 }, { x: 850, y: 140, w: 90, h: 24 } ],
+    5: [ { x: 40, y: 530, w: 60, h: 24 }, { x: 150, y: 470, w: 55, h: 24 }, { x: 270, y: 400, w: 60, h: 24 }, { x: 390, y: 330, w: 55, h: 24 }, { x: 510, y: 260, w: 60, h: 24 }, { x: 640, y: 190, w: 65, h: 24 }, { x: 770, y: 130, w: 70, h: 24 }, { x: 880, y: 80, w: 70, h: 24 } ]
+  };
+
+  const levelMap = maps[lv] || maps[5];
+  levelMap.forEach(p => platforms.push({ ...p, type: 'brick' }));
+  levelMap.forEach(p => collectibles.push({ x: p.x + p.w/2 - 8, y: p.y - 40, w: 16, h: 16, type: 'ring' }));
+  stats.ringsNeeded = collectibles.length;
+  collectibles.push({ x: 300, y: 280, w: 16, h: 16, type: 'crystal', value: 100 });
+  collectibles.push({ x: 650, y: 180, w: 16, h: 16, type: 'crystal', value: 100 });
+
+  const availableQs = questions.filter(q => q.level <= lv);
+  const selectedQs = shuffleArray(availableQs.length ? availableQs : questions).slice(0, Math.ceil(levelMap.length / 2));
+  levelMap.filter((_, i) => i % 2 === 1).forEach((p, i) => {
+    if (selectedQs[i]) questionZones.push({ x: p.x + p.w/2 - 20, y: p.y - 55, w: 40, h: 40, q: selectedQs[i], used: false });
+  });
+
+  if (lv >= 2) { hazards.push({ x: 260, y: H - 60, w: 30, h: 20, type: 'spike' }); hazards.push({ x: 520, y: H - 60, w: 40, h: 20, type: 'spike' }); }
+  if (lv >= 3) hazards.push({ x: 400, y: H - 55, w: 70, h: 15, type: 'lava' });
+  if (lv >= 4) { hazards.push({ x: 150, y: H - 55, w: 50, h: 15, type: 'lava' }); hazards.push({ x: 700, y: H - 55, w: 60, h: 15, type: 'lava' }); }
+
+  portals.push({ x: W - 85, y: H - 125, w: 55, h: 85 });
+  player.x = 60; player.y = H - 100; player.vx = 0; player.vy = 0;
+  updateHUD();
+}
+
+document.addEventListener('keydown', e => {
+  if (['ArrowLeft', 'a', 'A'].includes(e.key)) keys.left = true;
+  if (['ArrowRight', 'd', 'D'].includes(e.key)) keys.right = true;
+  if (['ArrowUp', 'w', 'W', ' '].includes(e.key)) { keys.jump = true; e.preventDefault(); }
+});
+document.addEventListener('keyup', e => {
+  if (['ArrowLeft', 'a', 'A'].includes(e.key)) keys.left = false;
+  if (['ArrowRight', 'd', 'D'].includes(e.key)) keys.right = false;
+  if (['ArrowUp', 'w', 'W', ' '].includes(e.key)) keys.jump = false;
+});
+
+document.querySelectorAll('.opt').forEach(btn => {
+  btn.onclick = () => {
+    const picked = btn.dataset.opt;
+    const isCorrect = picked === currentQuestionZone.q.key;
+    document.querySelectorAll('.opt').forEach(o => o.style.pointerEvents = 'none');
+    document.querySelector(`[data-opt="${currentQuestionZone.q.key}"]`).classList.add('correct');
+    if (!isCorrect) btn.classList.add('wrong');
+
+    const feedback = document.getElementById('feedback');
+    feedback.classList.remove('hidden');
+    if (isCorrect) {
+      stats.correct++;
+      const points = 100 * (stats.doubleScore ? 2 : 1);
+      stats.score += points; stats.rings++;
+      feedback.textContent = `✅ BENAR! +${points} poin`;
+      feedback.className = 'feedback correct';
+      if (Math.random() < 0.3) {
+        const bonus = ['shield', 'speed', 'double', 'life'][Math.floor(Math.random() * 4)];
+        if (bonus === 'shield') { stats.shield = 3; showBonus('🛡️ Perisai aktif!'); }
+        if (bonus === 'speed') { stats.speedBoost = 250; showBonus('⚡ Kecepatan naik!'); }
+        if (bonus === 'double') { stats.doubleScore = 250; showBonus('✨ Skor Ganda!'); }
+        if (bonus === 'life' && stats.hearts < 5) { stats.hearts++; showBonus('❤️ +1 Nyawa'); }
+      }
+    } else {
+      stats.wrong++;
+      feedback.textContent = '❌ SALAH! Tetap lanjut!';
+      feedback.className = 'feedback wrong';
+    }
+    currentQuestionZone.used = true;
+    updateHUD();
+    setTimeout(() => {
+      document.getElementById('qModal').classList.add('hidden');
+      feedback.classList.add('hidden');
+      document.querySelectorAll('.opt').forEach(o => { o.classList.remove('correct', 'wrong'); o.style.pointerEvents = 'auto'; });
+      gameState = 'playing';
+    }, 1800);
+  };
+});
+
+function showQuestion(zone) {
+  gameState = 'question';
+  currentQuestionZone = zone;
+  const q = zone.q;
+  document.getElementById('qLevel').textContent = stats.level;
+  document.getElementById('qBody').textContent = q.q;
+  document.getElementById('optA').textContent = q.A;
+  document.getElementById('optB').textContent = q.B;
+  document.getElementById('optC').textContent = q.C;
+  document.getElementById('optD').textContent = q.D;
+  document.getElementById('qModal').classList.remove('hidden');
+}
+
+function showBonus(text) {
+  document.getElementById('bonusInfo').textContent = text;
+  setTimeout(() => document.getElementById('bonusInfo').textContent = '', 3000);
+}
+
+function loseLife() { stats.hearts--; updateHUD(); if (stats.hearts <= 0) endGame(); }
+function updateHUD() {
+  document.getElementById('hearts').textContent = stats.hearts;
+  document.getElementById('rings').textContent = stats.rings;
+  document.getElementById('ringNeed').textContent = stats.ringsNeeded;
+  document.getElementById('crystals').textContent = stats.crystals;
+  document.getElementById('score').textContent = stats.score;
+  document.getElementById('level').textContent = stats.level;
+}
+
+function endGame() {
+  gameState = 'ended';
+  document.getElementById('gameHUD').classList.add('hidden');
+  document.getElementById('ctrlHint').classList.add('hidden');
+  document.getElementById('finalMode').textContent = selectedMode === 'individual' ? 'Individu' : selectedMode === 'team' ? 'Bersama' : 'Pertarungan';
+  document.getElementById('finalScore').textContent = stats.score;
+  document.getElementById('okCount').textContent = stats.correct;
+  document.getElementById('noCount').textContent = stats.wrong;
+  document.getElementById('totalQ').textContent = stats.correct + stats.wrong;
+  document.getElementById('endScreen').classList.remove('hidden');
+}
+
+document.getElementById('restartBtn').onclick = () => location.reload();
+
+function updateGame() {
+  if (gameState !== 'playing') return;
+  const speed = stats.speedBoost ? 6.5 : 4;
+  const gravity = 0.55;
+  const jumpPower = -11.5;
+
+  if (keys.left) { player.vx = -speed; player.dir = -1; }
+  else if (keys.right) { player.vx = speed; player.dir = 1; }
+  else player.vx *= 0.85;
+  if (keys.jump && player.onGround) { player.vy = jumpPower; player.onGround = false; }
+
+  player.vy += gravity;
+  player.x += player.vx;
+  player.y += player.vy;
+  if (player.x < 0) player.x = 0;
+  if (player.x > W - player.w) player.x = W - player.w;
+
+  player.onGround = false;
+  for (const p of platforms) {
+    if (boxCollision(player, p)) {
+      if (player.vy > 0 && player.y + player.h - player.vy <= p.y + 5) {
+        player.y = p.y - player.h; player.vy = 0; player.onGround = true;
+      }
+    }
+  }
+
+  if (player.y > H + 60) { loseLife(); player.x = 60; player.y = H - 100; player.vx = 0; player.vy = 0; }
+
+  for (let i = collectibles.length; i--;) {
+    const c = collectibles[i];
+    if (boxCollision(player, c)) {
+      if (c.type === 'ring') { stats.rings++; stats.score += 20 * (stats.doubleScore ? 2 : 1); }
+      else if (c.type === 'crystal') { stats.crystals++; stats.score += c.value * (stats.doubleScore ? 2 : 1); }
+      collectibles.splice(i, 1); updateHUD();
+    }
+  }
+
+  if (stats.shield <= 0) {
+    for (const h of hazards) {
+      if (boxCollision(player, h)) { loseLife(); player.x = 60; player.y = H - 100; player.vx = 0; player.vy = 0; break; }
+    }
+  }
+
+  for (const z of questionZones) { if (!z.used && boxCollision(player, z)) showQuestion(z); }
+
+  if (stats.rings >= stats.ringsNeeded) {
+    for (const pt of portals) {
+      if (boxCollision(player, pt)) { if (stats.level < 5) initLevel(stats.level + 1); else endGame(); }
+    }
+  }
+
+  if (stats.shield > 0) stats.shield--;
+  if (stats.speedBoost > 0) stats.speedBoost--;
+  if (stats.doubleScore > 0) stats.doubleScore--;
+}
+
+function drawGame() {
+  ctx.clearRect(0, 0, W, H);
+  if (gameState === 'setup' || gameState === 'ended') return;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  [[100,80],[350,60],[650,90],[820,70]].forEach(([x,y])=>{
+    ctx.beginPath(); ctx.arc(x,y,30,0,Math.PI*2); ctx.arc(x+35,y-10,25,0,Math.PI*2); ctx.arc(x+60,y+5,28,0,Math.PI*2); ctx.fill();
+  });
+
+  platforms.forEach(p=>{
+    ctx.fillStyle = p.type === 'ground' ? '#6a4428' : '#b7412c';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = p.type === 'ground' ? '#4caf50' : '#d4603c';
+    ctx.fillRect(p.x, p.y, p.w, 6);
+  });
+
+  hazards.forEach(h=>{
+    if (h.type === 'spike') {
+      ctx.fillStyle = '#444';
+      for (let i=0; i<h.w; i+=10) {
+        ctx.beginPath(); ctx.moveTo(h.x+i, h.y+h.h); ctx.lineTo(h.x+i+5, h.y); ctx.lineTo(h.x+i+10, h.y+h.h); ctx.fill();
+      }
+    } else if (h.type === 'lava') {
+      ctx.fillStyle = '#ff5722'; ctx.fillRect(h.x, h.y, h.w, h.h);
+      ctx.fillStyle = '#ffab00'; ctx.fillRect(h.x, h.y, h.w, 4);
+    }
+  });
+
+  collectibles.forEach(c=>{
+    if (c.type === 'ring') {
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(c.x+8, c.y+8, 10, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath(); ctx.moveTo(c.x+8, c.y); ctx.lineTo(c.x+16, c.y+8); ctx.lineTo(c.x+8, c.y+16); ctx.lineTo(c.x, c.y+8); ctx.fill();
+    }
+  });
+
+  questionZones.forEach(z=>{
+    if (!z.used) {
+      ctx.fillStyle = 'rgba(255,215,0,0.7)';
+      ctx.beginPath(); ctx.arc(z.x+20, z.y+20, 22, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#222'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('?', z.x+20, z.y+22);
+    }
+  });
+
+  portals.forEach(pt=>{
+    const open = stats.rings >= stats.ringsNeeded;
+    ctx.fillStyle = open ? '#4ade80' : '#999'; ctx.fillRect(pt.x, pt.y, pt.w, pt.h);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(open ? 'MASUK!' : 'KUNCI', pt.x+pt.w/2, pt.y+pt.h/2);
+  });
+
+  ctx.fillStyle = '#e53935';
+  ctx.beginPath(); ctx.arc(player.x+16, player.y+16, 16, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(player.x+12+player.dir*4, player.y+12, 4, 0, Math.PI*2); ctx.arc(player.x+20+player.dir*4, player.y+12, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(player.x+12+player.dir*5, player.y+13, 2, 0, Math.PI*2); ctx.arc(player.x+20+player.dir*5, player.y+13, 2, 0, Math.PI*2); ctx.fill();
+
+  if (stats.shield > 0) {
+    ctx.strokeStyle = 'rgba(66,165,245,0.6)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(player.x+16, player.y+16, 22, 0, Math.PI*2); ctx.stroke();
+  }
+}
+
+function gameLoop() { updateGame(); drawGame(); requestAnimationFrame(gameLoop); }
+</script>
+</body>
+</html>
